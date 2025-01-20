@@ -24,25 +24,13 @@ pub enum AnalyzeResult {
 
 lazy_static! {
     static ref FIREWALL: IpFirewall = {
-        let mut fw = IpFirewall::new(Policy::Blacklist);
-        fw.add_rule(Filter::DstIpAddress("160.251.175.134".parse().unwrap()), 100);
-        fw.add_rule(Filter::SrcIpAddress("160.251.175.134".parse().unwrap()), 99);
-        fw.add_rule(Filter::DstIpAddress("192.168.100.168".parse().unwrap()), 98);
-        fw.add_rule(Filter::SrcIpAddress("192.168.100.168".parse().unwrap()), 97);
-        fw.add_rule(Filter::DstIpAddress("192.168.100.95".parse().unwrap()), 96);
-        fw.add_rule(Filter::SrcIpAddress("192.168.100.95".parse().unwrap()), 95);
-        fw.add_rule(Filter::DstIpAddress("192.168.100.81".parse().unwrap()), 64);
-        fw.add_rule(Filter::SrcIpAddress("192.168.100.81".parse().unwrap()), 63);
-        fw.add_rule(Filter::DstPort(5432), 95);
-        fw.add_rule(Filter::SrcPort(5432), 90);
-        fw.add_rule(Filter::DstPort(2233), 85);
-        fw.add_rule(Filter::SrcPort(2233), 80);
-        fw.add_rule(Filter::DstPort(19132), 75);
-        fw.add_rule(Filter::SrcPort(19132), 70);
-        fw.add_rule(Filter::DstPort(19133), 65);
-        fw.add_rule(Filter::SrcPort(19133), 60);
-        fw.add_rule(Filter::DstPort(1900), 55);
-        fw.add_rule(Filter::SrcPort(1900), 50);
+        let mut fw = IpFirewall::new(Policy::Whitelist);
+        fw.add_rule(Filter::DstIpAddress("192.168.0.1".parse().unwrap()), 100);
+        fw.add_rule(Filter::SrcIpAddress("192.168.0.1".parse().unwrap()), 99);
+        fw.add_rule(Filter::DstIpAddress("192.168.0.30".parse().unwrap()), 98);
+        fw.add_rule(Filter::SrcIpAddress("192.168.0.30".parse().unwrap()), 97);
+        fw.add_rule(Filter::DstIpAddress("192.168.0.155".parse().unwrap()), 96);
+        fw.add_rule(Filter::SrcIpAddress("192.168.0.155".parse().unwrap()), 95);
         fw
     };
 }
