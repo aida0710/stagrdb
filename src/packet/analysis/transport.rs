@@ -1,6 +1,6 @@
 use crate::idps_log;
 use crate::packet::analysis::AnalyzeResult;
-use log::{debug, info, warn};
+use log::{debug, info, trace, warn};
 use std::net::IpAddr;
 
 #[derive(Debug)]
@@ -14,7 +14,7 @@ impl TransportHeader {
     pub fn verify_tcp_checksum(&self, transport_data: &[u8], src_ip: IpAddr, dst_ip: IpAddr) -> bool {
         // パケット内のチェックサム値を取得
         let packet_checksum = u16::from_be_bytes([transport_data[16], transport_data[17]]);
-        info!("パケット内のチェックサム: 0x{:04x}", packet_checksum);
+        trace!("パケット内のチェックサム: 0x{:04x}", packet_checksum);
 
         // 疑似ヘッダーの準備
         let mut pseudo_header = Vec::new();
@@ -45,13 +45,13 @@ impl TransportHeader {
         }
 
         let calculated_checksum = !sum as u16;
-        info!("計算されたチェックサム: 0x{:04x}", calculated_checksum);
+        trace!("計算されたチェックサム: 0x{:04x}", calculated_checksum);
 
         let is_valid = packet_checksum == calculated_checksum;
         if !is_valid {
-            warn!("TCPチェックサムが不一致: パケット内=0x{:04x}, 計算値=0x{:04x}", packet_checksum, calculated_checksum);
+            trace!("TCPチェックサムが不一致: パケット内=0x{:04x}, 計算値=0x{:04x}", packet_checksum, calculated_checksum);
         } else {
-            info!("TCPチェックサム: OK");
+            trace!("TCPチェックサム: OK");
         }
 
         is_valid

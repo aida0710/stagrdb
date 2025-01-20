@@ -6,7 +6,7 @@ use crate::packet::types::EtherType;
 use crate::packet::{InetAddr, PacketData};
 use chrono::Utc;
 use lazy_static::lazy_static;
-use log::info;
+use log::{info, trace};
 use std::net::IpAddr;
 
 #[derive(Clone, Copy)]
@@ -76,7 +76,7 @@ impl PacketAnalyzer {
             return AnalyzeResult::Reject;
         }
 
-        info!(
+        trace!(
             "Transport: {}:{} -> {}:{}, Flags: SYN={}, ACK={}, RST={}, FIN={}",
             src_ip,
             src_port,

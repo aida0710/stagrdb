@@ -2,6 +2,7 @@ use crate::idps_log;
 use crate::packet::analysis::transport::parse_transport_header;
 use crate::packet::analysis::AnalyzeResult;
 use crate::packet::types::{EtherType, IpProtocol};
+use log::info;
 use rtnetlink::IpVersion;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
@@ -79,6 +80,8 @@ async fn parse_ip_header(data: &[u8]) -> Result<Option<IpHeader>, AnalyzeResult>
             let ip_protocol = IpProtocol::from(data[9]); // プロトコルフィールド
             let src_ip = Ipv4Addr::new(data[12], data[13], data[14], data[15]);
             let dst_ip = Ipv4Addr::new(data[16], data[17], data[18], data[19]);
+
+            info!("IPv4パケット: src_ip={}, dst_ip={}, protocol={:?}", src_ip, dst_ip, ip_protocol);
 
             Ok(Some(IpHeader {
                 version: IpVersion::V4,
