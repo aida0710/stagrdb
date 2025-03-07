@@ -1,6 +1,6 @@
 use crate::idps_log;
 use crate::packet::analysis::AnalyzeResult;
-use log::{debug, info, trace, warn};
+use log::{trace, warn};
 use std::net::IpAddr;
 
 #[derive(Debug)]
