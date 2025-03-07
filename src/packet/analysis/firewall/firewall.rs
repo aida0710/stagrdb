@@ -54,4 +54,12 @@ impl IpFirewall {
             Policy::Blacklist => !block,
         }
     }
+
+    pub fn get_policy(&self) -> Policy {
+        self.policy
+    }
+
+    pub fn rules_count(&self) -> usize {
+        self.rules.len()
+    }
 }

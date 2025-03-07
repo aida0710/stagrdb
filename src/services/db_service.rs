@@ -1,0 +1,111 @@
+use crate::database::{Database, ExecuteQuery};
+use crate::packet::analysis::{Filter, IpFirewall, Policy};
+use crate::services::error::ServiceError;
+use log::{error, info};
+use std::net::IpAddr;
+use std::str::FromStr;
+
+pub struct DbService;
+
+impl DbService {
+    pub async fn validate_and_record_node(node_id: i16) -> Result<String, ServiceError> {
+        let db = Database::get_database();
+
+        // ノードの存在確認
+        let validate_query = "SELECT name FROM node_list WHERE id = $1";
+        let rows = db.query(validate_query, &[&node_id]).await?;
+
+        if rows.is_empty() {
+            error!("ノードID {} はデータベースに登録されていません", node_id);
+            return Err(ServiceError::NodeNotFound(node_id));
+        }
+
+        let node_name: String = rows[0].get("name");
+        info!("ノードID {} (名前: {}) が検証されました", node_id, node_name);
+
+        // 起動時間の記録
+        let record_query = "INSERT INTO node_activity (node_id, boot_time) VALUES ($1, NOW()) RETURNING id";
+        let result = db.query(record_query, &[&node_id]).await?;
+        let activity_id: i32 = result[0].get("id");
+
+        info!("ノードID {} の起動を記録しました (activity_id: {})", node_id, activity_id);
+
+        Ok(node_name)
+    }
+
+    pub async fn load_firewall_settings(node_id: i16) -> Result<IpFirewall, ServiceError> {
+        let db = Database::get_database();
+
+        // ファイアウォールのポリシー決定（最も優先度の高いもの）
+        let policy_query = "
+            SELECT policy FROM firewall_settings
+            WHERE (node_id = $1 OR node_id IS NULL)
+            ORDER BY priority DESC LIMIT 1
+        ";
+
+        let policy_rows = db.query(policy_query, &[&node_id]).await?;
+        let default_policy = if !policy_rows.is_empty() {
+            let policy_str: String = policy_rows[0].get("policy");
+            match policy_str.to_lowercase().as_str() {
+                "whitelist" => Policy::Whitelist,
+                "blacklist" => Policy::Blacklist,
+                _ => {
+                    info!("未知のポリシー '{}' が指定されました。デフォルトのWhitelistを使用します", policy_str);
+                    Policy::Whitelist
+                },
+            }
+        } else {
+            info!("ファイアウォール設定が見つかりませんでした。デフォルトのWhitelistを使用します");
+            Policy::Whitelist
+        };
+
+        let mut firewall = IpFirewall::new(default_policy);
+
+        // ファイアウォールルールの取得
+        let rules_query = "
+            SELECT filter_type, filter_value, priority
+            FROM firewall_settings
+            WHERE (node_id = $1 OR node_id IS NULL)
+            ORDER BY priority DESC
+        ";
+
+        let rule_rows = db.query(rules_query, &[&node_id]).await?;
+        let rules_count = rule_rows.len();
+
+        for row in &rule_rows {
+            let filter_type: String = row.get("filter_type");
+            let filter_value: String = row.get("filter_value");
+            let priority: i16 = row.get("priority");
+
+            if let Some(filter) = Self::parse_filter_rule(&filter_type, &filter_value) {
+                info!("ファイアウォールルールを追加: {:?}, 優先度: {}", filter, priority);
+                firewall.add_rule(filter, priority as u8);
+            } else {
+                error!("ファイアウォールルールの解析に失敗しました: {} = {}", filter_type, filter_value);
+            }
+        }
+
+        info!("ノード {} のファイアウォール設定を {} 個のルールでロードしました", node_id, rules_count);
+        Ok(firewall)
+    }
+
+    fn parse_filter_rule(filter_type: &str, filter_value: &str) -> Option<Filter> {
+        match filter_type {
+            "SrcIpAddress" => IpAddr::from_str(filter_value).ok().map(Filter::SrcIpAddress),
+            "DstIpAddress" => IpAddr::from_str(filter_value).ok().map(Filter::DstIpAddress),
+            "SrcPort" => filter_value.parse::<u16>().ok().map(Filter::SrcPort),
+            "DstPort" => filter_value.parse::<u16>().ok().map(Filter::DstPort),
+            "EtherType" => {
+                // 16進数の場合の処理
+                if filter_value.starts_with("0x") {
+                    u16::from_str_radix(&filter_value[2..], 16).ok().map(Filter::EtherType)
+                } else {
+                    // 10進数の場合
+                    filter_value.parse::<u16>().ok().map(Filter::EtherType)
+                }
+            },
+            "IpProtocol" => filter_value.parse::<u8>().ok().map(Filter::IpProtocol),
+            _ => None,
+        }
+    }
+}
