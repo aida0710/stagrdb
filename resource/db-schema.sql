@@ -6,13 +6,16 @@ CREATE TABLE IF NOT EXISTS node_list (
 );
 
 -- ファイアウォール設定のテーブル
-CREATE TABLE IF NOT EXISTS firewall_settings (
-    id SERIAL PRIMARY KEY,
-    node_id SMALLINT, -- NULLの場合はすべてのノードに適用
-    filter_type VARCHAR(50) NOT NULL CHECK (filter_type IN ('SrcIpAddress', 'DstIpAddress', 'SrcPort', 'DstPort', 'EtherType', 'IpProtocol')),
-    filter_value TEXT NOT NULL,       -- IPアドレスやポート番号など
-    priority SMALLINT NOT NULL,
-    policy VARCHAR(20) NOT NULL DEFAULT 'Whitelist' -- 'Whitelist'または'Blacklist'
+CREATE TABLE IF NOT EXISTS firewall_settings
+(
+    id           SERIAL PRIMARY KEY,
+    node_id      SMALLINT,
+    filter_type  VARCHAR(50) NOT NULL CHECK (filter_type IN
+                                             ('SrcIpAddress', 'DstIpAddress', 'SrcPort', 'DstPort', 'EtherType',
+                                              'IpProtocol')),
+    filter_value TEXT        NOT NULL,
+    priority     SMALLINT    NOT NULL,
+    policy       VARCHAR(20) NOT NULL CHECK (policy IN ('Whitelist', 'Blacklist'))
 );
 
 -- ノードの起動情報を記録するテーブル
