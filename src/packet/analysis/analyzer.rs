@@ -1,12 +1,12 @@
 use crate::idps_log;
 use crate::packet::analysis::ethernet::parse_ethernet_header;
-use crate::packet::analysis::firewall::{Filter, FirewallPacket, IpFirewall, Policy};
+use crate::packet::analysis::firewall::FirewallPacket;
 use crate::packet::analysis::ip::parse_ip_packet;
 use crate::packet::types::EtherType;
 use crate::packet::{InetAddr, PacketData};
+use crate::services::FirewallService;
 use chrono::Utc;
-use lazy_static::lazy_static;
-use log::{info, trace};
+use log::trace;
 use std::net::IpAddr;
 
 #[derive(Clone, Copy)]
@@ -20,19 +20,6 @@ pub struct IpHeader {
 pub enum AnalyzeResult {
     Accept(PacketData),
     Reject,
-}
-
-lazy_static! {
-    static ref FIREWALL: IpFirewall = {
-        let mut fw = IpFirewall::new(Policy::Whitelist);
-        fw.add_rule(Filter::DstIpAddress("192.168.0.1".parse().unwrap()), 100);
-        fw.add_rule(Filter::SrcIpAddress("192.168.0.1".parse().unwrap()), 99);
-        fw.add_rule(Filter::DstIpAddress("192.168.0.30".parse().unwrap()), 98);
-        fw.add_rule(Filter::SrcIpAddress("192.168.0.30".parse().unwrap()), 97);
-        fw.add_rule(Filter::DstIpAddress("192.168.0.155".parse().unwrap()), 96);
-        fw.add_rule(Filter::SrcIpAddress("192.168.0.155".parse().unwrap()), 95);
-        fw
-    };
 }
 
 pub struct PacketAnalyzer {}
@@ -68,7 +55,15 @@ impl PacketAnalyzer {
             src_port,
             dst_port,
         );
-        if !FIREWALL.check(&firewall_packet) {
+
+        if !FirewallService::check_packet(&firewall_packet).await {
+            idps_log!(
+                "パケットがファイアウォールルールによってブロックされました: {}:{} -> {}:{}",
+                src_ip,
+                src_port,
+                dst_ip,
+                dst_port
+            );
             return AnalyzeResult::Reject;
         }
 
