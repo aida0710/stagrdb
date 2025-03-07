@@ -14,4 +14,7 @@ pub enum ServiceError {
 
     #[error("ファイアウォールルールの解析に失敗しました: {0}")]
     FirewallRuleParseError(String),
+
+    #[error("ファイアウォールポリシーの不一致: {0}")]
+    InconsistentPolicyError(String),
 }

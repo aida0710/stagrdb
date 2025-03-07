@@ -1,7 +1,7 @@
 use crate::database::{Database, ExecuteQuery};
-use crate::packet::analysis::{Filter, IpFirewall, Policy};
+use crate::packet::analysis::firewall::{Filter, IpFirewall, Policy};
 use crate::services::error::ServiceError;
-use log::{error, info};
+use log::{error, info, warn};
 use std::net::IpAddr;
 use std::str::FromStr;
 
@@ -58,6 +58,40 @@ impl DbService {
             info!("ファイアウォール設定が見つかりませんでした。デフォルトのWhitelistを使用します");
             Policy::Whitelist
         };
+
+        // 選択されたポリシーを表示
+        info!("ファイアウォールは {:?} ポリシーモードで動作します", default_policy);
+
+        // すべての設定を取得して、ポリシーの一貫性を確認
+        let all_policies_query = "
+            SELECT DISTINCT policy
+            FROM firewall_settings
+            WHERE (node_id = $1 OR node_id IS NULL)
+        ";
+
+        let all_policies = db.query(all_policies_query, &[&node_id]).await?;
+
+        // ポリシーの一貫性チェック
+        for row in &all_policies {
+            let policy_str: String = row.get("policy");
+            let current_policy = match policy_str.to_lowercase().as_str() {
+                "whitelist" => Policy::Whitelist,
+                "blacklist" => Policy::Blacklist,
+                _ => continue, // 不明なポリシーはスキップ
+            };
+
+            // メインポリシーと異なるポリシーが見つかった場合
+            if std::mem::discriminant(&current_policy) != std::mem::discriminant(&default_policy) {
+                warn!(
+                    "ポリシーの不一致を検出: メインポリシーは {:?} ですが、{:?} も設定されています",
+                    default_policy, current_policy
+                );
+                return Err(ServiceError::InconsistentPolicyError(format!(
+                    "一貫性のないファイアウォールポリシー: {:?}と{:?}が混在しています",
+                    default_policy, current_policy
+                )));
+            }
+        }
 
         let mut firewall = IpFirewall::new(default_policy);
 

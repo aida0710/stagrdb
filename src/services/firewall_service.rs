@@ -1,7 +1,7 @@
 use crate::packet::analysis::{FirewallPacket, IpFirewall};
 use crate::services::db_service::DbService;
 use crate::services::error::ServiceError;
-use log::{error, info};
+use log::{error, info, warn};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -27,7 +27,7 @@ impl FirewallService {
             },
             Err(e) => {
                 error!("ファイアウォール設定の読み込みに失敗しました: {}", e);
-                Err(ServiceError::FirewallLoadError(e.to_string()))
+                Err(e)
             },
         }
     }
@@ -38,7 +38,7 @@ impl FirewallService {
         match &*fw {
             Some(firewall) => firewall.check(packet),
             None => {
-                info!("ファイアウォールが初期化されていないため、全てのパケットを破棄します。早急に再起動してください。");
+                warn!("ファイアウォールが初期化されていないため、全てのパケットを破棄します。再起動してください。");
                 false
             },
         }
