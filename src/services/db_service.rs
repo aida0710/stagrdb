@@ -1,5 +1,5 @@
 use crate::database::{Database, ExecuteQuery};
-use crate::packet::analysis::firewall::{Filter, IpFirewall, Policy};
+use crate::packet::analysis::{Filter, IpFirewall, Policy};
 use crate::services::error::ServiceError;
 use log::{error, info, warn};
 use std::net::IpAddr;
