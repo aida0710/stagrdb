@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS firewall_settings
     node_id      SMALLINT,
     filter_type  VARCHAR(50) NOT NULL CHECK (filter_type IN
                                              ('SrcIpAddress', 'DstIpAddress', 'SrcPort', 'DstPort', 'EtherType',
-                                              'IpProtocol')),
+                                              'IpProtocol', 'SrcMacAddress', 'DstMacAddress',)),
     filter_value TEXT        NOT NULL,
     priority     SMALLINT    NOT NULL,
     policy       VARCHAR(20) NOT NULL CHECK (policy IN ('Whitelist', 'Blacklist'))
