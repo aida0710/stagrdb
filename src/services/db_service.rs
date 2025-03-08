@@ -1,5 +1,6 @@
 use crate::database::{Database, ExecuteQuery};
 use crate::packet::analysis::{Filter, IpFirewall, Policy};
+use crate::packet::MacAddr;
 use crate::services::error::ServiceError;
 use log::{error, info, warn};
 use pnet::datalink::NetworkInterface;
@@ -162,7 +163,29 @@ impl DbService {
                 }
             },
             "IpProtocol" => filter_value.parse::<u8>().ok().map(Filter::IpProtocol),
+            "SrcMacAddress" => Self::parse_mac_address(filter_value).map(Filter::SrcMacAddress),
+            "DstMacAddress" => Self::parse_mac_address(filter_value).map(Filter::DstMacAddress),
             _ => None,
         }
+    }
+
+    fn parse_mac_address(mac_str: &str) -> Option<MacAddr> {
+        // MACアドレスの形式: XX:XX:XX:XX:XX:XX または XX-XX-XX-XX-XX-XX
+        let cleaned_mac = mac_str.replace('-', ":");
+
+        let parts: Vec<&str> = cleaned_mac.split(':').collect();
+        if parts.len() != 6 {
+            return None;
+        }
+
+        let mut bytes = [0u8; 6];
+        for (i, part) in parts.iter().enumerate() {
+            match u8::from_str_radix(part, 16) {
+                Ok(byte) => bytes[i] = byte,
+                Err(_) => return None,
+            }
+        }
+
+        Some(MacAddr(bytes))
     }
 }
