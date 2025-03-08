@@ -19,6 +19,7 @@ impl FirewallService {
         match DbService::load_firewall_settings(node_id).await {
             Ok(firewall) => {
                 // グローバルファイアウォールインスタンスを更新
+                info!("ファイアウォール設定を読み込みました: {:?}", firewall);
                 let mut fw = DYNAMIC_FIREWALL.write().await;
                 *fw = Some(firewall);
 
