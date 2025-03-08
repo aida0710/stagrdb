@@ -23,6 +23,9 @@ CREATE TABLE IF NOT EXISTS node_activity (
     id SERIAL PRIMARY KEY,
     node_id SMALLINT NOT NULL,
     boot_time TIMESTAMPTZ DEFAULT NOW(),
+    interface_name VARCHAR(255) NOT NULL,
+    mac_address MACADDR NOT NULL,
+    ip_address INET NOT NULL,
     FOREIGN KEY (node_id) REFERENCES node_list(id)
 );
 
