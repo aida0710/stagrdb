@@ -44,9 +44,19 @@ async fn main() -> Result<(), InitProcessError> {
     info!("データベースに接続できました: address:{}, port:{}", config.database.host, config.database.port);
 
     let interface = select_interface(config.network.docker_mode, &config.network.docker_interface_name).map_err(|e| InitProcessError::InterfaceSelectionError(e.to_string()))?;
-    info!("デバイスの選択に成功しました: {}", interface.name);
 
-    match DbService::validate_and_record_node(config.node_id).await {
+    let mac_str = match &interface.mac {
+        Some(mac) => mac.to_string(),
+        None => "不明".to_string(),
+    };
+
+    let ip_addresses: Vec<String> = interface.ips.iter().map(|ip| ip.to_string()).collect();
+    let ip_str = if ip_addresses.is_empty() { "不明".to_string() } else { ip_addresses.join(", ") };
+
+    info!("デバイスの選択に成功しました: {}", interface.name);
+    info!("選択されたインターフェース情報: 名前={}, MACアドレス={}, IPアドレス={}", interface.name, mac_str, ip_str);
+
+    match DbService::validate_and_record_node(config.node_id, &interface).await {
         Ok(node_name) => {
             info!("ノード {} ({}) の検証と起動記録が完了しました", config.node_id, node_name);
         },

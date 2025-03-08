@@ -2,13 +2,14 @@ use crate::database::{Database, ExecuteQuery};
 use crate::packet::analysis::{Filter, IpFirewall, Policy};
 use crate::services::error::ServiceError;
 use log::{error, info, warn};
+use pnet::datalink::NetworkInterface;
 use std::net::IpAddr;
 use std::str::FromStr;
 
 pub struct DbService;
 
 impl DbService {
-    pub async fn validate_and_record_node(node_id: i16) -> Result<String, ServiceError> {
+    pub async fn validate_and_record_node(node_id: i16, interface: &NetworkInterface) -> Result<String, ServiceError> {
         let db = Database::get_database();
 
         // ノードの存在確認
@@ -23,12 +24,34 @@ impl DbService {
         let node_name: String = rows[0].get("name");
         info!("ノードID {} (名前: {}) が検証されました", node_id, node_name);
 
-        // 起動時間の記録
-        let record_query = "INSERT INTO node_activity (node_id, boot_time) VALUES ($1, NOW()) RETURNING id";
-        let result = db.query(record_query, &[&node_id]).await?;
+        // MACアドレスの取得と変換
+        let mac_address_str = match &interface.mac {
+            Some(mac) => mac.to_string(),
+            None => {
+                warn!("選択されたインターフェースにMACアドレスがありません: {}", interface.name);
+                "00:00:00:00:00:00".to_string()
+            },
+        };
+
+        // IPアドレスの取得と変換（カンマ区切りで複数のIPを一つのフィールドに格納）
+        let ip_addresses: Vec<String> = interface.ips.iter().map(|ip| ip.to_string()).collect();
+        let ip_address_str = if ip_addresses.is_empty() {
+            warn!("選択されたインターフェースにIPアドレスがありません: {}", interface.name);
+            "0.0.0.0/0".to_string()
+        } else {
+            ip_addresses.join(",")
+        };
+
+        // 起動時間とインターフェース情報の記録
+        let record_query = "INSERT INTO node_activity (node_id, boot_time, interface_name, mac_address, ip_address)
+                           VALUES ($1, NOW(), $2, $3, $4) RETURNING id";
+
+        let result = db.query(record_query, &[&node_id, &interface.name, &mac_address_str, &ip_address_str]).await?;
+
         let activity_id: i32 = result[0].get("id");
 
         info!("ノードID {} の起動を記録しました (activity_id: {})", node_id, activity_id);
+        info!("インターフェース: {}, MACアドレス: {}, IPアドレス: {}", interface.name, mac_address_str, ip_address_str);
 
         Ok(node_name)
     }
