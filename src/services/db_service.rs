@@ -25,16 +25,17 @@ impl DbService {
         let node_name: String = rows[0].get("name");
         info!("ノードID {} (名前: {}) が検証されました", node_id, node_name);
 
-        // MACアドレスの取得と変換
-        let mac_address_str = match &interface.mac {
-            Some(mac) => mac.to_string(),
+        let mac_address = match &interface.mac {
+            Some(mac) => {
+                let mac_str = mac.to_string();
+                Self::parse_mac_address(&mac_str).unwrap_or(MacAddr([0, 0, 0, 0, 0, 0]))
+            },
             None => {
                 warn!("選択されたインターフェースにMACアドレスがありません: {}", interface.name);
-                "00:00:00:00:00:00".to_string()
+                MacAddr([0, 0, 0, 0, 0, 0])
             },
         };
 
-        // IPアドレスの取得と変換（カンマ区切りで複数のIPを一つのフィールドに格納）
         let ip_addresses: Vec<String> = interface.ips.iter().map(|ip| ip.to_string()).collect();
         let ip_address_str = if ip_addresses.is_empty() {
             warn!("選択されたインターフェースにIPアドレスがありません: {}", interface.name);
@@ -47,12 +48,12 @@ impl DbService {
         let record_query = "INSERT INTO node_activity (node_id, boot_time, interface_name, mac_address, ip_address)
                            VALUES ($1, NOW(), $2, $3, $4) RETURNING id";
 
-        let result = db.query(record_query, &[&node_id, &interface.name, &mac_address_str, &ip_address_str]).await?;
+        let result = db.query(record_query, &[&node_id, &interface.name, &mac_address, &ip_address_str]).await?;
 
         let activity_id: i32 = result[0].get("id");
 
         info!("ノードID {} の起動を記録しました (activity_id: {})", node_id, activity_id);
-        info!("インターフェース: {}, MACアドレス: {}, IPアドレス: {}", interface.name, mac_address_str, ip_address_str);
+        info!("インターフェース: {}, MACアドレス: {}, IPアドレス: {}", interface.name, mac_address, ip_address_str);
 
         Ok(node_name)
     }
