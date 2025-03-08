@@ -81,7 +81,7 @@ async fn parse_ip_header(data: &[u8]) -> Result<Option<IpHeader>, AnalyzeResult>
             let src_ip = Ipv4Addr::new(data[12], data[13], data[14], data[15]);
             let dst_ip = Ipv4Addr::new(data[16], data[17], data[18], data[19]);
 
-            info!("IPv4パケット: src_ip={}, dst_ip={}, protocol={:?}", src_ip, dst_ip, ip_protocol);
+            //info!("IPv4パケット: src_ip={}, dst_ip={}, protocol={:?}", src_ip, dst_ip, ip_protocol);
 
             Ok(Some(IpHeader {
                 version: IpVersion::V4,

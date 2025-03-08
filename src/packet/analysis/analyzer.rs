@@ -57,13 +57,13 @@ impl PacketAnalyzer {
         );
 
         if !FirewallService::check_packet(&firewall_packet).await {
-            idps_log!(
+            /*idps_log!(
                 "パケットがファイアウォールルールによってブロックされました: {}:{} -> {}:{}",
                 src_ip,
                 src_port,
                 dst_ip,
                 dst_port
-            );
+            );*/
             return AnalyzeResult::Reject;
         }
 
