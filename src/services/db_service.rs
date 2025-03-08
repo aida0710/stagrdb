@@ -45,7 +45,7 @@ impl DbService {
         };
 
         // 起動時間とインターフェース情報の記録
-        let record_query = "INSERT INTO node_activity (node_id, boot_time, interface_name, mac_address, ip_address)
+        let record_query = "INSERT INTO node_activity (node_id, boot_time, interface_name, mac_address, ip_addresses)
                            VALUES ($1, NOW(), $2, $3, $4) RETURNING id";
 
         let result = db.query(record_query, &[&node_id, &interface.name, &mac_address, &ip_address_str]).await?;
